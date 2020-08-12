@@ -67,7 +67,7 @@ File = ''
   [[DeviceList.AutoEvents]]
     Frequency = '10s'
     OnChange = false
-    Resource = 'Switch'
+    Resource = 'SwitchButton'
   [[DeviceList.AutoEvents]]
     Frequency = '30s'
     OnChange = false

@@ -55,31 +55,9 @@ deviceResources:
       units:
         { type: "string", readWrite: "R", defaultValue: "[]uint8" }
 
-deviceCommands:
-  -
-    name: "Switch"
-    get:
-      - { operation: "get", deviceResource: "SwitchButton" }
-    set:
-      - { operation: "set", deviceResource: "SwitchButton", parameter: "false" }
-  -
-    name: "Image"
-    get:
-      - { operation: "get", deviceResource: "Image" }
-  -
-    name: "Rotation"
-    get:
-      - { operation: "get", deviceResource: "Xrotation" }
-      - { operation: "get", deviceResource: "Yrotation" }
-      - { operation: "get", deviceResource: "Zrotation" }
-    set:
-      - { operation: "set", deviceResource: "Xrotation", parameter: "0" }
-      - { operation: "set", deviceResource: "Yrotation", parameter: "0" }
-      - { operation: "set", deviceResource: "Zrotation", parameter: "0" }
-
 coreCommands:
   -
-    name: "Switch"
+    name: "SwitchButton"
     get:
       path: "/api/v1/device/{deviceId}/SwitchButton"
       responses:
