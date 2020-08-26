@@ -55,14 +55,14 @@ func (s *DeviceService) processAsyncResults(ctx context.Context, wg *sync.WaitGr
 				}
 
 				if s.config.Device.DataTransform {
-					err := transformer.TransformReadResult(cv, dr.Properties.Value)
+					err := transformer.TransformReadResult(cv, dr.Properties.Value, s.LoggingClient)
 					if err != nil {
 						s.LoggingClient.Error(fmt.Sprintf("processAsyncResults - CommandValue (%s) transformed failed: %v", cv.String(), err))
 						cv = dsModels.NewStringValue(cv.DeviceResourceName, cv.Origin, fmt.Sprintf("Transformation failed for device resource, with value: %s, property value: %v, and error: %v", cv.String(), dr.Properties.Value, err))
 					}
 				}
 
-				err := transformer.CheckAssertion(cv, dr.Properties.Value.Assertion, &device)
+				err := transformer.CheckAssertion(cv, dr.Properties.Value.Assertion, &device, s.LoggingClient, s.edgexClients.DeviceClient)
 				if err != nil {
 					s.LoggingClient.Error(fmt.Sprintf("processAsyncResults - Assertion failed for device resource: %s, with value: %s and assertion: %s, %v", cv.DeviceResourceName, cv.String(), dr.Properties.Value.Assertion, err))
 					cv = dsModels.NewStringValue(cv.DeviceResourceName, cv.Origin, fmt.Sprintf("Assertion failed for device resource, with value: %s and assertion: %s", cv.String(), dr.Properties.Value.Assertion))
@@ -88,7 +88,7 @@ func (s *DeviceService) processAsyncResults(ctx context.Context, wg *sync.WaitGr
 			cevent := contract.Event{Device: device.Name, Readings: readings}
 			event := &dsModels.Event{Event: cevent}
 			event.Origin = common.GetUniqueOrigin()
-			common.SendEvent(event)
+			common.SendEvent(event, s.LoggingClient, s.edgexClients.EventClient)
 
 		}
 	}
