@@ -43,6 +43,7 @@ const (
 	GetCmdMethod string = "get"
 	SetCmdMethod string = "set"
 
+	CorrelationHeaderKey = "X-Correlation-ID"
 	CorrelationHeader = clients.CorrelationHeader
 	URLRawQuery       = "urlRawQuery"
 	SDKReservedPrefix = "ds-"
