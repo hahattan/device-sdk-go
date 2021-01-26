@@ -1,24 +1,19 @@
 // -*- mode: Go; indent-tabs-mode: t -*-
 //
-// Copyright (C) 2020 IOTech Ltd
+// Copyright (C) 2020-2021 IOTech Ltd
 //
 // SPDX-License-Identifier: Apache-2.0
 
 package clients
 
 import (
-	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/coredata"
-	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/general"
-	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/metadata"
+	"github.com/edgexfoundry/go-mod-core-contracts/v2/v2/clients/interfaces"
 )
 
 type EdgeXClients struct {
-	GeneralClient          general.GeneralClient
-	DeviceClient           metadata.DeviceClient
-	DeviceServiceClient    metadata.DeviceServiceClient
-	DeviceProfileClient    metadata.DeviceProfileClient
-	AddressableClient      metadata.AddressableClient
-	ProvisionWatcherClient metadata.ProvisionWatcherClient
-	EventClient            coredata.EventClient
-	ValueDescriptorClient  coredata.ValueDescriptorClient
+	DeviceClient           interfaces.DeviceClient
+	DeviceServiceClient    interfaces.DeviceServiceClient
+	DeviceProfileClient    interfaces.DeviceProfileClient
+	ProvisionWatcherClient interfaces.ProvisionWatcherClient
+	EventClient            interfaces.EventClient
 }

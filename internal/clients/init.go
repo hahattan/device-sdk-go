@@ -1,6 +1,6 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 //
-// Copyright (C) 2018-2020 IOTech Ltd
+// Copyright (C) 2018-2021 IOTech Ltd
 // Copyright (c) 2019 Intel Corporation
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -14,17 +14,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/edgexfoundry/device-sdk-go/v2/internal/container"
 	bootstrapContainer "github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/container"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/bootstrap/startup"
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/di"
 	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients"
-	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/coredata"
-	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/general"
 	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/logger"
-	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/metadata"
-	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/urlclient/local"
+	"github.com/edgexfoundry/go-mod-core-contracts/v2/v2"
+	v2Clients "github.com/edgexfoundry/go-mod-core-contracts/v2/v2/clients/http"
 	"github.com/edgexfoundry/go-mod-registry/v2/registry"
+
+	"github.com/edgexfoundry/device-sdk-go/v2/internal/container"
 
 	"github.com/edgexfoundry/device-sdk-go/v2/internal/common"
 )
@@ -149,7 +148,7 @@ func checkServiceAvailableByPing(serviceId string, configuration *common.Configu
 		Timeout: time.Duration(timeout),
 	}
 
-	_, err := client.Get(addr + clients.ApiPingRoute)
+	_, err := client.Get(addr + v2.ApiPingRoute)
 	if err != nil {
 		lc.Error(err.Error())
 	}
@@ -182,21 +181,16 @@ func checkServiceAvailableViaRegistry(serviceId string, rc registry.Client, lc l
 
 func initializeClients(dic *di.Container) {
 	configuration := container.ConfigurationFrom(dic.Get)
-	// initialize Core Metadata clients
-	ac := metadata.NewAddressableClient(local.New(configuration.Clients[common.ClientMetadata].Url() + clients.ApiAddressableRoute))
-	dc := metadata.NewDeviceClient(local.New(configuration.Clients[common.ClientMetadata].Url() + clients.ApiDeviceRoute))
-	dsc := metadata.NewDeviceServiceClient(local.New(configuration.Clients[common.ClientMetadata].Url() + clients.ApiDeviceServiceRoute))
-	dpc := metadata.NewDeviceProfileClient(local.New(configuration.Clients[common.ClientMetadata].Url() + clients.ApiDeviceProfileRoute))
-	gc := general.NewGeneralClient(local.New(configuration.Clients[common.ClientMetadata].Url()))
-	pwc := metadata.NewProvisionWatcherClient(local.New(configuration.Clients[common.ClientMetadata].Url() + clients.ApiProvisionWatcherRoute))
-	// initialize Core Data clients
-	ec := coredata.NewEventClient(local.New(configuration.Clients[common.ClientData].Url() + clients.ApiEventRoute))
-	vdc := coredata.NewValueDescriptorClient(local.New(configuration.Clients[common.ClientData].Url() + common.APIValueDescriptorRoute))
+	metadataBaseURL := configuration.Clients[common.ClientMetadata].Url()
+	coredataBaseURL := configuration.Clients[common.ClientData].Url()
+
+	dc := v2Clients.NewDeviceClient(metadataBaseURL)
+	dsc := v2Clients.NewDeviceServiceClient(metadataBaseURL)
+	dpc := v2Clients.NewDeviceProfileClient(metadataBaseURL)
+	pwc := v2Clients.NewProvisionWatcherClient(metadataBaseURL)
+	ec := v2Clients.NewEventClient(coredataBaseURL)
 
 	dic.Update(di.ServiceConstructorMap{
-		container.MetadataAddressableClientName: func(get di.Get) interface{} {
-			return ac
-		},
 		container.MetadataDeviceClientName: func(get di.Get) interface{} {
 			return dc
 		},
@@ -206,17 +200,11 @@ func initializeClients(dic *di.Container) {
 		container.MetadataDeviceProfileClientName: func(get di.Get) interface{} {
 			return dpc
 		},
-		container.GeneralClientName: func(get di.Get) interface{} {
-			return gc
-		},
 		container.MetadataProvisionWatcherClientName: func(get di.Get) interface{} {
 			return pwc
 		},
 		container.CoredataEventClientName: func(get di.Get) interface{} {
 			return ec
-		},
-		container.CoredataValueDescriptorClientName: func(get di.Get) interface{} {
-			return vdc
 		},
 	})
 }

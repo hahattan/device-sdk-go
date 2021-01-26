@@ -8,7 +8,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -17,10 +16,9 @@ import (
 	"github.com/edgexfoundry/go-mod-bootstrap/v2/di"
 	"github.com/gorilla/mux"
 
-	"github.com/edgexfoundry/device-sdk-go/v2/internal/cache"
 	"github.com/edgexfoundry/device-sdk-go/v2/internal/container"
 	"github.com/edgexfoundry/device-sdk-go/v2/internal/provision"
-	v2cache "github.com/edgexfoundry/device-sdk-go/v2/internal/v2/cache"
+	"github.com/edgexfoundry/device-sdk-go/v2/internal/v2/cache"
 	dsModels "github.com/edgexfoundry/device-sdk-go/v2/pkg/models"
 )
 
@@ -41,18 +39,12 @@ func (b *Bootstrap) BootstrapHandler(ctx context.Context, wg *sync.WaitGroup, st
 
 	err := ds.selfRegister()
 	if err != nil {
-		ds.LoggingClient.Error(fmt.Sprintf("Couldn't register to metadata service: %v\n", err))
+		ds.LoggingClient.Errorf("couldn't register to metadata service: %v", err)
 		return false
 	}
 
 	// initialize devices, deviceResources, provisionWatchers & profiles cache
-	cache.InitCache(
-		ds.ServiceName,
-		ds.LoggingClient,
-		container.CoredataValueDescriptorClientFrom(dic.Get),
-		container.MetadataDeviceClientFrom(dic.Get),
-		container.MetadataProvisionWatcherClientFrom(dic.Get))
-	v2cache.InitV2Cache()
+	cache.InitV2Cache()
 
 	if ds.AsyncReadings() {
 		ds.asyncCh = make(chan *dsModels.AsyncValues, ds.config.Service.AsyncBufferSize)
@@ -65,7 +57,7 @@ func (b *Bootstrap) BootstrapHandler(ctx context.Context, wg *sync.WaitGroup, st
 
 	err = ds.driver.Initialize(ds.LoggingClient, ds.asyncCh, ds.deviceCh)
 	if err != nil {
-		ds.LoggingClient.Error(fmt.Sprintf("Driver.Initialize failed: %v\n", err))
+		ds.LoggingClient.Errorf("failed to initialize protocol driver: %v", err)
 		return false
 	}
 	ds.initialized = true
@@ -86,13 +78,13 @@ func (b *Bootstrap) BootstrapHandler(ctx context.Context, wg *sync.WaitGroup, st
 
 	err = provision.LoadProfiles(ds.config.Device.ProfilesDir, dic)
 	if err != nil {
-		ds.LoggingClient.Error(fmt.Sprintf("Failed to create the pre-defined device profiles: %v\n", err))
+		ds.LoggingClient.Errorf("failed to create the pre-defined device profiles: %v", err)
 		return false
 	}
 
 	err = provision.LoadDevices(ds.config.DeviceList, dic)
 	if err != nil {
-		ds.LoggingClient.Error(fmt.Sprintf("Failed to create the pre-defined devices: %v\n", err))
+		ds.LoggingClient.Errorf("failed to create the pre-defined devices: %v", err)
 		return false
 	}
 
