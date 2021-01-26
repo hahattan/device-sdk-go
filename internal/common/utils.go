@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 //
 // Copyright (C) 2017-2018 Canonical Ltd
-// Copyright (C) 2018-2020 IOTech Ltd
+// Copyright (C) 2018-2021 IOTech Ltd
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -20,9 +20,8 @@ import (
 	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients"
 	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/coredata"
 	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/logger"
-	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/metadata"
 	contract "github.com/edgexfoundry/go-mod-core-contracts/v2/models"
-	v2 "github.com/edgexfoundry/go-mod-core-contracts/v2/v2"
+	"github.com/edgexfoundry/go-mod-core-contracts/v2/v2"
 	"github.com/google/uuid"
 
 	dsModels "github.com/edgexfoundry/device-sdk-go/v2/pkg/models"
@@ -289,17 +288,4 @@ func FilterQueryParams(queryParams string, lc logger.LoggingClient) url.Values {
 	}
 
 	return m
-}
-
-func UpdateLastConnected(name string, configuration *ConfigurationStruct, lc logger.LoggingClient, dc metadata.DeviceClient) {
-	if !configuration.Device.UpdateLastConnected {
-		lc.Debug("Update of last connected times is disabled for: " + name)
-		return
-	}
-
-	t := time.Now().UnixNano() / int64(time.Millisecond)
-	err := dc.UpdateLastConnectedByName(context.Background(), name, t)
-	if err != nil {
-		lc.Error("Failed to update last connected value for device: " + name)
-	}
 }

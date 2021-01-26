@@ -13,14 +13,18 @@ import (
 	"fmt"
 	"regexp"
 	"sync"
-	"time"
 
-	"github.com/edgexfoundry/device-sdk-go/v2/internal/cache"
+	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/logger"
+	"github.com/edgexfoundry/go-mod-core-contracts/v2/v2/dtos"
+	commonDTO "github.com/edgexfoundry/go-mod-core-contracts/v2/v2/dtos/common"
+	"github.com/edgexfoundry/go-mod-core-contracts/v2/v2/dtos/requests"
+	contract "github.com/edgexfoundry/go-mod-core-contracts/v2/v2/models"
+	"github.com/google/uuid"
+
 	"github.com/edgexfoundry/device-sdk-go/v2/internal/common"
 	"github.com/edgexfoundry/device-sdk-go/v2/internal/transformer"
+	"github.com/edgexfoundry/device-sdk-go/v2/internal/v2/cache"
 	dsModels "github.com/edgexfoundry/device-sdk-go/v2/pkg/models"
-	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/logger"
-	contract "github.com/edgexfoundry/go-mod-core-contracts/v2/models"
 )
 
 // processAsyncResults processes readings that are pushed from
@@ -59,51 +63,53 @@ func (s *DeviceService) sendAsyncValues(acv *dsModels.AsyncValues, working chan 
 
 	device, ok := cache.Devices().ForName(acv.DeviceName)
 	if !ok {
-		s.LoggingClient.Error(fmt.Sprintf("processAsyncResults - recieved Device %s not found in cache", acv.DeviceName))
+		s.LoggingClient.Errorf("async - failed to find received device %s in cache", acv.DeviceName)
 		return
 	}
 
 	for _, cv := range acv.CommandValues {
 		// get the device resource associated with the rsp.RO
-		dr, ok := cache.Profiles().DeviceResource(device.Profile.Name, cv.DeviceResourceName)
+		dr, ok := cache.Profiles().DeviceResource(device.ProfileName, cv.DeviceResourceName)
 		if !ok {
-			s.LoggingClient.Error(fmt.Sprintf("processAsyncResults - Device Resource %s not found in Device %s", cv.DeviceResourceName, acv.DeviceName))
+			s.LoggingClient.Errorf("async - failed to find device resource %s for device %s", cv.DeviceResourceName, acv.DeviceName)
 			continue
 		}
 
-		if s.config.Device.DataTransform {
-			err := transformer.TransformReadResult(cv, dr.Properties.Value, s.LoggingClient)
-			if err != nil {
-				s.LoggingClient.Error(fmt.Sprintf("processAsyncResults - CommandValue (%s) transformed failed: %v", cv.String(), err))
+		// TODO: uncomment when transform package is ready for v2.
+		//if s.config.Device.DataTransform {
+		//	err := transformer.TransformReadResult(cv, dr.Properties.Value, s.LoggingClient)
+		//	if err != nil {
+		//		s.LoggingClient.Error(fmt.Sprintf("processAsyncResults - CommandValue (%s) transformed failed: %v", cv.String(), err))
+		//
+		//		if errors.As(err, &transformer.OverflowError{}) {
+		//			cv = dsModels.NewStringValue(cv.DeviceResourceName, cv.Origin, transformer.Overflow)
+		//		} else if errors.As(err, &transformer.NaNError{}) {
+		//			cv = dsModels.NewStringValue(cv.DeviceResourceName, cv.Origin, transformer.NaN)
+		//		} else {
+		//			cv = dsModels.NewStringValue(cv.DeviceResourceName, cv.Origin, fmt.Sprintf("Transformation failed for device resource, with value: %s, property value: %v, and error: %v", cv.String(), dr.Properties.Value, err))
+		//		}
+		//	}
+		//}
 
-				if errors.As(err, &transformer.OverflowError{}) {
-					cv = dsModels.NewStringValue(cv.DeviceResourceName, cv.Origin, transformer.Overflow)
-				} else if errors.As(err, &transformer.NaNError{}) {
-					cv = dsModels.NewStringValue(cv.DeviceResourceName, cv.Origin, transformer.NaN)
-				} else {
-					cv = dsModels.NewStringValue(cv.DeviceResourceName, cv.Origin, fmt.Sprintf("Transformation failed for device resource, with value: %s, property value: %v, and error: %v", cv.String(), dr.Properties.Value, err))
-				}
-			}
-		}
+		//err := transformer.CheckAssertion(cv, dr.Properties.Value.Assertion, &device, s.LoggingClient, s.edgexClients.DeviceClient)
+		//if err != nil {
+		//	s.LoggingClient.Error(fmt.Sprintf("processAsyncResults - Assertion failed for device resource: %s, with value: %s and assertion: %s, %v", cv.DeviceResourceName, cv.String(), dr.Properties.Value.Assertion, err))
+		//	cv = dsModels.NewStringValue(cv.DeviceResourceName, cv.Origin, fmt.Sprintf("Assertion failed for device resource, with value: %s and assertion: %s", cv.String(), dr.Properties.Value.Assertion))
+		//}
 
-		err := transformer.CheckAssertion(cv, dr.Properties.Value.Assertion, &device, s.LoggingClient, s.edgexClients.DeviceClient)
-		if err != nil {
-			s.LoggingClient.Error(fmt.Sprintf("processAsyncResults - Assertion failed for device resource: %s, with value: %s and assertion: %s, %v", cv.DeviceResourceName, cv.String(), dr.Properties.Value.Assertion, err))
-			cv = dsModels.NewStringValue(cv.DeviceResourceName, cv.Origin, fmt.Sprintf("Assertion failed for device resource, with value: %s and assertion: %s", cv.String(), dr.Properties.Value.Assertion))
-		}
+		//ro, err := cache.Profiles().ResourceOperation(device.Profile.Name, cv.DeviceResourceName, common.GetCmdMethod)
+		//if err != nil {
+		//	s.LoggingClient.Debug(fmt.Sprintf("processAsyncResults - getting resource operation failed: %s", err.Error()))
+		//} else if len(ro.Mappings) > 0 {
+		//	newCV, ok := transformer.MapCommandValue(cv, ro.Mappings)
+		//	if ok {
+		//		cv = newCV
+		//	} else {
+		//		s.LoggingClient.Warn(fmt.Sprintf("processAsyncResults - Mapping failed for Device Resource Operation: %s, with value: %s, %v", ro.DeviceCommand, cv.String(), err))
+		//	}
+		//}
 
-		ro, err := cache.Profiles().ResourceOperation(device.Profile.Name, cv.DeviceResourceName, common.GetCmdMethod)
-		if err != nil {
-			s.LoggingClient.Debug(fmt.Sprintf("processAsyncResults - getting resource operation failed: %s", err.Error()))
-		} else if len(ro.Mappings) > 0 {
-			newCV, ok := transformer.MapCommandValue(cv, ro.Mappings)
-			if ok {
-				cv = newCV
-			} else {
-				s.LoggingClient.Warn(fmt.Sprintf("processAsyncResults - Mapping failed for Device Resource Operation: %s, with value: %s, %v", ro.DeviceCommand, cv.String(), err))
-			}
-		}
-
+		event, err := application.comm
 		reading := common.CommandValueToReading(cv, device.Name, dr.Properties.Value.MediaType, dr.Properties.Value.FloatEncoding)
 		readings = append(readings, *reading)
 	}
@@ -133,28 +139,31 @@ func (s *DeviceService) processAsyncFilterAndAdd(ctx context.Context, wg *sync.W
 				for _, pw := range pws {
 					if whitelistPass(d, pw, s.LoggingClient) && blacklistPass(d, pw, s.LoggingClient) {
 						if _, ok := cache.Devices().ForName(d.Name); ok {
-							s.LoggingClient.Debug(fmt.Sprintf("Candidate discovered device %s already existed", d.Name))
+							s.LoggingClient.Debugf("candidate discovered device %s already existed", d.Name)
 							break
 						}
 
-						s.LoggingClient.Info(fmt.Sprintf("Adding discovered device %s to Edgex", d.Name))
-						millis := time.Now().UnixNano() / int64(time.Millisecond)
-						device := &contract.Device{
-							Name:           d.Name,
-							Profile:        pw.Profile,
-							Protocols:      d.Protocols,
-							Labels:         d.Labels,
-							Service:        pw.Service,
-							AdminState:     pw.AdminState,
-							OperatingState: contract.Enabled,
-							AutoEvents:     nil,
+						s.LoggingClient.Infof("adding discovered device %s to Edgex", d.Name)
+						device := contract.Device{
+							Name:        d.Name,
+							Description: d.Description,
+							Protocols:   d.Protocols,
+							Labels:      d.Labels,
+							ProfileName: pw.ProfileName,
+							ServiceName: pw.ServiceName,
+							AdminState:  pw.AdminState,
+							AutoEvents:  pw.AutoEvents,
 						}
-						device.Origin = millis
-						device.Description = d.Description
 
-						_, err := s.edgexClients.DeviceClient.Add(ctx, device)
+						req := requests.AddDeviceRequest{
+							BaseRequest: commonDTO.BaseRequest{
+								RequestId: uuid.New().String(),
+							},
+							Device:      dtos.FromDeviceModelToDTO(device),
+						}
+						_, err := s.edgexClients.DeviceClient.Add(ctx, []requests.AddDeviceRequest{req})
 						if err != nil {
-							s.LoggingClient.Error(fmt.Sprintf("failed to create discovered device %s: %v", device.Name, err))
+							s.LoggingClient.Errorf("failed to create discovered device %s: %v", device.Name, err)
 						} else {
 							break
 						}
@@ -174,7 +183,7 @@ func whitelistPass(d dsModels.DiscoveredDevice, pw contract.ProvisionWatcher, lc
 			if value, ok := protocol[name]; ok {
 				matched, err := regexp.MatchString(regex, value)
 				if !matched || err != nil {
-					lc.Debug(fmt.Sprintf("Device %s's %s value %s did not match PW identifier: %s", d.Name, name, value, regex))
+					lc.Debugf("Device %s's %s value %s did not match PW identifier: %s", d.Name, name, value, regex)
 					break
 				}
 				matchedCount += 1
@@ -196,7 +205,7 @@ func blacklistPass(d dsModels.DiscoveredDevice, pw contract.ProvisionWatcher, lc
 			if value, ok := protocol[name]; ok {
 				for _, v := range blacklist {
 					if value == v {
-						lc.Debug(fmt.Sprintf("Discovered Device %s's %s should not be %s", d.Name, name, value))
+						lc.Debugf("Discovered Device %s's %s should not be %s", d.Name, name, value)
 						return false
 					}
 				}
