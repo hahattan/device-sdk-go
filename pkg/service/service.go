@@ -18,7 +18,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/edgexfoundry/device-sdk-go/internal/autoevent"
 	"github.com/edgexfoundry/device-sdk-go/internal/clients"
 	"github.com/edgexfoundry/device-sdk-go/internal/common"
 	"github.com/edgexfoundry/device-sdk-go/internal/container"
@@ -131,7 +130,6 @@ func (s *DeviceService) Stop(force bool) {
 	if s.initialized {
 		_ = s.driver.Stop(false)
 	}
-	autoevent.GetManager().StopAutoEvents()
 }
 
 // selfRegister register device service itself onto metadata.
